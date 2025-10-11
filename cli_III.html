@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>JD CLI Web</title>
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  background: black;
+  color: white;
+  font-family: monospace;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#welcome {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: black;
+  color: white;
+  font-size: 18px;
+  white-space: pre;
+  flex-direction: column;
+  text-align: center;
+  z-index: 10;
+}
+
+#boot-text {
+  margin-bottom: 20px;
+  color: #00ff00;
+  font-size: 16px;
+  height: 1.5em;
+  overflow: hidden;
+}
+
+#jd-logo { margin-bottom: 30px; }
+
+#loading-container {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+#loading-bar {
+  width: 40ch;
+  height: 20px;
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+#loading-progress {
+  height: 100%;
+  background: linear-gradient(to right, #00ff00, #00aa00);
+  width: 0%;
+  border-radius: 10px;
+  transition: width 0.3s;
+}
+
+#loading-text {
+  color: #cccccc;
+  font-size: 14px;
+  height: 1.2em;
+}
+
+#terminal-container {
+  display: none;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#terminal {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.command-line {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.prompt {
+  color: #00ff00;
+  margin-right: 5px;
+}
+
+.user-input { display: inline; }
+
+.cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1.2em;
+  background: #00ff00;
+  animation: blink 1.2s infinite;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+#hidden-input {
+  position: absolute;
+  left: -9999px;
+  opacity: 0;
+}
+
+.command-output { color: #cccccc; }
+.command-error { color: #ff5555; }
+.command-success { color: #55ff55; }
+.system-text { color: #8888ff; }
+</style>
+</head>
+<body>
+
+<div id="welcome">
+  <div id="boot-text">Initializing JD CLI...</div>
+  <pre id="jd-logo" style="display:none;">
+ __          ________ _      _____ ____  __  __ ______ 
+ \ \        / /  ____| |    / ____/ __ \|  \/  |  ____|
+  \ \  /\  / /| |__  | |   | |   | |  | | \  / | |__   
+   \ \/  \/ / |  __| | |   | |   | |  | | |\/| |  __|  
+    \  /\  /  | |____| |___| |___| |__| | |  | | |____ 
+     \/  \/   |______|______\_____\____/|_|  |_|______|
+  </pre>
+  <div id="loading-container">
+    <div id="loading-bar"><div id="loading-progress"></div></div>
+    <div id="loading-text">Fixing regrets...</div>
+  </div>
+</div>
+
+<div id="terminal-container">
+  <div id="terminal"></div>
+  <input type="text" id="hidden-input" autocomplete="off" spellcheck="false">
+</div>
+
+<script>
+const terminal = document.getElementById("terminal");
+const hiddenInput = document.getElementById("hidden-input");
+const progress = document.getElementById("loading-progress");
+const welcome = document.getElementById("welcome");
+const bootText = document.getElementById("boot-text");
+const jdLogo = document.getElementById("jd-logo");
+const loadingContainer = document.getElementById("loading-container");
+const loadingText = document.getElementById("loading-text");
+
+const bootMessages = [
+  "Fixing regrets...",
+  "Loading monk mode...",
+  "Trying to build an optimized version...",
+  "Remembering life goals...",
+  "Forgetting her...",
+  "Being a good man...",
+  "Booting up emotional stability...",
+  "Compiling confidence...",
+  "Patching reality...",
+  "Updating self-worth..."
+];
+
+let bootIndex = 0;
+function showNextBootText() {
+  if (bootIndex < bootMessages.length) loadingText.textContent = bootMessages[bootIndex++];
+  else bootIndex = 0;
+}
+
+setTimeout(() => {
+  bootText.style.display = "none";
+  jdLogo.style.display = "block";
+  loadingContainer.style.display = "flex";
+  startLoading();
+}, 2000);
+
+function startLoading() {
+  let load = 0;
+  const bootInterval = setInterval(showNextBootText, 500);
+  const loadingInterval = setInterval(() => {
+    load += 5;
+    progress.style.width = load + "%";
+    if (load >= 100) {
+      clearInterval(loadingInterval);
+      clearInterval(bootInterval);
+      setTimeout(() => {
+        welcome.style.display = "none";
+        document.getElementById("terminal-container").style.display = "flex";
+        hiddenInput.focus();
+        initialInstructions.forEach(line => printToTerminal(line, "command-output"));
+        printToTerminal("");
+        createCommandLine();
+      }, 400);
+    }
+  }, 250);
+}
+
+const initialInstructions = [
+  "Welcome to JD CLI v1.0.0",
+  "Type 'help' to see available commands",
+  "",
+  "Available commands:",
+  "  <span style='color: yellow;'>jd --version</span>     - Show version information",
+  "  <span style='color: yellow;'>jd greet</span>         - Get a friendly greeting",
+  "  <span style='color: yellow;'>jd celebrate</span>     - Start celebration mode",
+  "  <span style='color: yellow;'>jd --update</span>      - Update the CLI",
+  "  clear            - Clear the terminal",
+  "  status           - know about JD",      
+  "  help             - Show this help message",
+  "",
+  "Try typing a command to get started!"
+];
+
+let currentCommandLine = null;
+let currentUserInput = null;
+let currentCursor = null;
+
+function createCommandLine() {
+  currentCommandLine = document.createElement("div");
+  currentCommandLine.className = "command-line";
+  const prompt = document.createElement("span");
+  prompt.className = "prompt";
+  prompt.textContent = "$";
+  currentUserInput = document.createElement("span");
+  currentUserInput.className = "user-input";
+  currentCursor = document.createElement("span");
+  currentCursor.className = "cursor";
+  currentCommandLine.append(prompt, currentUserInput, currentCursor);
+  terminal.appendChild(currentCommandLine);
+  terminal.scrollTop = terminal.scrollHeight;
+  hiddenInput.focus();
+}
+
+function printToTerminal(text, className = "") {
+  const line = document.createElement("div");
+  line.innerHTML = text; // using innerHTML for colored spans
+  if (className) line.className = className;
+  terminal.appendChild(line);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+hiddenInput.addEventListener("input", () => {
+  currentUserInput.textContent = hiddenInput.value;
+});
+
+hiddenInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    const cmd = hiddenInput.value.trim();
+    currentCommandLine.removeChild(currentCursor);
+    printToTerminal(`$ ${cmd}`);
+    handleCommand(cmd);
+    hiddenInput.value = "";
+    createCommandLine();
+  }
+  if (e.key === "Tab") e.preventDefault();
+  if (e.key === "l" && e.ctrlKey) {
+    e.preventDefault();
+    terminal.innerHTML = "";
+    createCommandLine();
+  }
+});
+
+function handleCommand(cmd) {
+  switch(cmd) {
+    case "jd --version":
+      printToTerminal("<span style='color: yellow;'>jd CLI version 20.11.31</span>", "command-success");
+      break;
+    case "jd greet":
+      printToTerminal("👋 Hey there! This is JD's custom CLI tool.", "command-success");
+      printToTerminal("Built with ❤️ and JavaScript.", "command-success");
+      break;
+    case "jd celebrate":
+      animateCelebrate();
+      break;
+    case "jd --update":
+      animateUpdate();
+      break;
+    case "clear":
+      terminal.innerHTML = "";
+      break;
+    case "help":
+      initialInstructions.forEach(line => printToTerminal(line, "command-output"));
+      break;
+    case "status":
+      printToTerminal("Fetching life stats...\n", "command-output");
+      const aliveDot = `<span style="color:lime; text-shadow:0 0 5px lime;">●</span>`;
+      const info = {
+        "Real Name": "JEEVANDAS",
+        "Life": `${aliveDot} Alive`,
+        "Age": "21",
+        "Date of Birth": "13 May 2004",
+        "Height": "176 cm",
+        "Weight": "71.4 kg",
+        "Relationship Status": "Single",
+        "Profession": "Student",
+        "Bike": "Honda Uicorn 2009",
+        "Life Goal": "To live until death"
+      };
+      Object.entries(info).forEach(([key, value]) => {
+        printToTerminal(`<span style='color:#00ff00;'>${key.padEnd(22,' ')}:</span> ${value}`, "command-success");
+      });
+      break;
+    default:
+      printToTerminal(`Command not found: ${cmd}`, "command-error");
+      printToTerminal("Type 'help' to see available commands", "command-output");
+  }
+}
+
+function animateCelebrate() {
+  let count = 0;
+  const msg = "🎉🎂 HAPPY BIRTHDAY JD! 🎂🎉";
+  const interval = setInterval(() => {
+    printToTerminal(msg, "command-success");
+    count++;
+    if (count > 8) clearInterval(interval);
+  }, 200);
+}
+
+function animateUpdate() {
+  terminal.innerHTML = "";
+  printToTerminal("Starting update process...", "system-text");
+  printToTerminal("");
+  let step = 0;
+  const maxSteps = 50;
+  const logo = [
+    "        █████ ██████████  ",
+    "       ░░███ ░░███░░░░███ ",
+    "        ░███  ░███   ░░███",
+    "        ░███  ░███    ░███",
+    "        ░███  ░███    ░███",
+    "  ███   ░███  ░███    ███ ",
+    " ░░████████   ██████████  ",
+    "  ░░░░░░░░   ░░░░░░░░░░   "
+  ];
+  const interval = setInterval(() => {
+    for(let i=0;i<logo.length+2;i++){if(terminal.lastChild) terminal.removeChild(terminal.lastChild);}
+    logo.forEach((line,index)=>{
+      const lineDiv = document.createElement("div");
+      lineDiv.textContent = line;
+      const lightness = 30+(Math.sin((step+index)/2)*20+20);
+      lineDiv.style.color = `hsl(20,100%,${lightness}%)`;
+      terminal.appendChild(lineDiv);
+    });
+    const msgs=["Downloading packages...","Verifying signatures...","Installing dependencies...","Compiling binaries...","Optimizing performance...","Applying patches...","Finalizing installation..."];
+    printToTerminal(msgs[Math.floor(Math.random()*msgs.length)],"system-text");
+    step++;
+    if(step>maxSteps){
+      clearInterval(interval);
+      printToTerminal("");
+      printToTerminal("✅ Update Complete!","command-success");
+      printToTerminal("jd CLI is now up-to-date 🎉","command-success");
+      printToTerminal("Version: 1.0.1","command-success");
+      printToTerminal("");
+      createCommandLine();
+    }
+  },120);
+}
+
+document.getElementById("terminal-container").addEventListener("click",()=>hiddenInput.focus());
+</script>
+
+</body>
+</html>
+
