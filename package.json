@@ -1,0 +1,30 @@
+{
+  "name": "jd-cli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "jd": "./index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeevandas-jd/jd-cli.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jeevandas-jd/jd-cli/issues"
+  },
+  "homepage": "https://github.com/jeevandas-jd/jd-cli#readme",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "chalk-animation": "^1.6.0",
+    "gradient-string": "^3.0.0",
+    "ora": "^5.4.1"
+  }
+}

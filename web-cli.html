@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JD CLI Web</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: black;
+      color: white;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #terminal {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      white-space: pre;
+    }
+    #input {
+      border: none;
+      outline: none;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 16px;
+      background: black;
+      color: white;
+    }
+    .blinking {
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0.2; }
+    }
+    .gradient-fire {
+      background: linear-gradient(to top, red, orange, yellow);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+<div id="terminal"></div>
+<input id="input" type="text" placeholder="Type a command...">
+
+<script>
+const terminal = document.getElementById("terminal");
+const input = document.getElementById("input");
+
+// JD pixel logo
+const logo = [
+  "        █████ ██████████  ",
+  "       ░░███ ░░███░░░░███ ",
+  "        ░███  ░███   ░░███",
+  "        ░███  ░███    ░███",
+  "        ░███  ░███    ░███",
+  "  ███   ░███  ░███    ███ ",
+  " ░░████████   ██████████  ",
+  "  ░░░░░░░░   ░░░░░░░░░░   "
+];
+
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    const cmd = input.value.trim();
+    terminal.innerHTML += `$ ${cmd}\n`;
+    handleCommand(cmd);
+    input.value = "";
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+});
+
+function handleCommand(cmd) {
+  switch(cmd) {
+    case "jd --version":
+      terminal.innerHTML += "jd CLI version 1.0.0 🚀\n";
+      break;
+    case "jd greet":
+      terminal.innerHTML += "👋 Hey there! This is JD’s custom CLI tool.\nBuilt with ❤️ and JavaScript.\n";
+      break;
+    case "jd celebrate":
+      animateCelebrate();
+      break;
+    case "jd --update":
+      animateUpdate();
+      break;
+    case "clear":
+	terminal.innerHTML="";
+      break;
+    default:
+      terminal.innerHTML += "Unknown command\n";
+      break;
+  }
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+// Animate Celebrate
+function animateCelebrate() {
+  let count = 0;
+  const colors = ["red", "orange", "yellow", "white"];
+  const interval = setInterval(() => {
+    terminal.innerHTML += `%c🎉🎂 HAPPY BIRTHDAY JD! 🎂🎉\n`;
+    terminal.scrollTop = terminal.scrollHeight;
+    count++;
+    if (count > 10) clearInterval(interval);
+  }, 300);
+}
+
+// Animate Update with Fire effect
+function animateUpdate() {
+  let step = 0;
+  const maxSteps = 20;
+  const interval = setInterval(() => {
+    terminal.innerHTML = "";
+    logo.forEach((line, index) => {
+      const lineDiv = document.createElement("div");
+      lineDiv.textContent = line;
+      // Fire gradient effect: shift colors from bottom to top
+      const hue = (step*20 + index*10) % 360;
+      lineDiv.style.color = `hsl(${hue}, 100%, 50%)`;
+      terminal.appendChild(lineDiv);
+    });
+    step++;
+    terminal.scrollTop = terminal.scrollHeight;
+    if (step > maxSteps) {
+      clearInterval(interval);
+      terminal.innerHTML += "\n✅ Update Complete!\njd CLI is now up-to-date 🎉\nVersion: 1.0.1\n";
+    }
+  }, 150);
+}
+</script>
+
+</body>
+</html>

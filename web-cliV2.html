@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JD CLI Web</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: black;
+      color: white;
+      font-family: monospace;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Welcome Screen */
+    #welcome {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: black;
+      color: white;
+      font-size: 18px;
+      white-space: pre;
+      flex-direction: column;
+      text-align: center;
+      z-index: 10;
+    }
+
+    #loading-bar {
+      width: 40ch;
+      height: 20px;
+      background: #333;
+      border-radius: 10px;
+      margin-top: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+    #loading-progress {
+      height: 100%;
+      background: linear-gradient(to right, white, gray);
+      width: 0%;
+      border-radius: 10px;
+      transition: width 0.3s;
+    }
+
+    /* Terminal */
+    #terminal-container {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #terminal {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    /* Command line */
+    #command-line {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background: #111;
+      border-top: 1px solid #333;
+      position: relative;
+    }
+
+    #prompt {
+      color: #00ff00;
+      margin-right: 5px;
+    }
+
+    /* Improved cursor */
+    #input-container {
+      display: flex;
+      align-items: center;
+      position: relative;
+      flex: 1;
+    }
+
+    #user-input {
+      display: inline-block;
+      min-height: 1.2em;
+    }
+
+    #cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1.2em;
+      background: #00ff00;
+      animation: blink 1.2s infinite;
+      margin-left: 1px;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    #real-input {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: default;
+    }
+
+    .command-output {
+      color: #cccccc;
+    }
+
+    .command-error {
+      color: #ff5555;
+    }
+
+    .command-success {
+      color: #55ff55;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Welcome Screen -->
+<div id="welcome">
+<pre>
+ __          ________ _      _____ ____  __  __ ______ 
+ \ \        / /  ____| |    / ____/ __ \|  \/  |  ____|
+  \ \  /\  / /| |__  | |   | |   | |  | | \  / | |__   
+   \ \/  \/ / |  __| | |   | |   | |  | | |\/| |  __|  
+    \  /\  /  | |____| |___| |___| |__| | |  | | |____ 
+     \/  \/   |______|______\_____\____/|_|  |_|______|
+                                                       
+                                                       
+</pre>
+<div id="loading-bar"><div id="loading-progress"></div></div>
+<p>Loading JD CLI...</p>
+</div>
+
+<!-- Terminal Container -->
+<div id="terminal-container">
+  <div id="terminal"></div>
+  <div id="command-line">
+    <span id="prompt">$</span>
+    <div id="input-container">
+      <span id="user-input"></span>
+      <span id="cursor"></span>
+      <input id="real-input" autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+</div>
+
+<script>
+const terminal = document.getElementById("terminal");
+const inputHidden = document.getElementById("real-input");
+const userInput = document.getElementById("user-input");
+const cursor = document.getElementById("cursor");
+const progress = document.getElementById("loading-progress");
+const welcome = document.getElementById("welcome");
+
+// Initial instructions
+const initialInstructions = [
+  "Welcome to JD CLI v1.0.0",
+  "Type 'help' to see available commands",
+  "",
+  "Available commands:",
+  "  jd --version     - Show version information",
+  "  jd greet         - Get a friendly greeting",
+  "  jd celebrate     - Start celebration mode",
+  "  jd --update      - Update the CLI",
+  "  clear            - Clear the terminal",
+  "  help             - Show this help message",
+  "",
+  "Try typing a command to get started!"
+];
+
+// Loading animation
+let load = 0;
+const loadingInterval = setInterval(() => {
+  load += 5;
+  progress.style.width = load + "%";
+  if (load >= 100) {
+    clearInterval(loadingInterval);
+    setTimeout(() => {
+      welcome.style.display = "none";
+      document.getElementById("terminal-container").style.display = "flex";
+      inputHidden.focus();
+      
+      // Show initial instructions
+      initialInstructions.forEach(line => {
+        printToTerminal(line, "command-output");
+      });
+      printToTerminal(""); // Empty line
+    }, 400);
+  }
+}, 250);
+
+// Print helper with optional class
+function printToTerminal(text, className = "") {
+  const line = document.createElement("div");
+  line.textContent = text;
+  if (className) {
+    line.className = className;
+  }
+  terminal.appendChild(line);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+// Handle typing
+inputHidden.addEventListener("input", () => {
+  userInput.textContent = inputHidden.value;
+});
+
+// Handle enter key
+inputHidden.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    const cmd = inputHidden.value.trim();
+    printToTerminal(`$ ${cmd}`);
+    handleCommand(cmd);
+    inputHidden.value = "";
+    userInput.textContent = "";
+  }
+  
+  // Prevent default behavior for Tab key
+  if (e.key === "Tab") {
+    e.preventDefault();
+  }
+});
+
+// Command handler
+function handleCommand(cmd) {
+  switch(cmd) {
+    case "jd --version":
+      printToTerminal("jd CLI version 1.0.0 🚀", "command-success");
+      break;
+    case "jd greet":
+      printToTerminal("👋 Hey there! This is JD's custom CLI tool.", "command-success");
+      printToTerminal("Built with ❤️ and JavaScript.", "command-success");
+      break;
+    case "jd celebrate":
+      animateCelebrate();
+      break;
+    case "jd --update":
+      animateUpdate();
+      break;
+    case "clear":
+      terminal.innerHTML = "";
+      break;
+    case "help":
+      initialInstructions.forEach(line => {
+        printToTerminal(line, "command-output");
+      });
+      break;
+    case "":
+      // Do nothing for empty command
+      break;
+    default:
+      printToTerminal(`Command not found: ${cmd}`, "command-error");
+      printToTerminal("Type 'help' to see available commands", "command-output");
+  }
+}
+
+// Celebrate animation
+function animateCelebrate() {
+  let count = 0;
+  const msg = "🎉🎂 HAPPY BIRTHDAY JD! 🎂🎉";
+  const interval = setInterval(() => {
+    printToTerminal(msg, "command-success");
+    count++;
+    if (count > 8) clearInterval(interval);
+  }, 200);
+}
+
+// Fire update animation
+function animateUpdate() {
+  const logo = [
+    "        █████ ██████████  ",
+    "       ░░███ ░░███░░░░███ ",
+    "        ░███  ░███   ░░███",
+    "        ░███  ░███    ░███",
+    "        ░███  ░███    ░███",
+    "  ███   ░███  ░███    ███ ",
+    " ░░████████   ██████████  ",
+    "  ░░░░░░░░   ░░░░░░░░░░   "
+  ];
+  
+  let step = 0;
+  const maxSteps = 50;
+  const interval = setInterval(() => {
+    terminal.innerHTML = "";
+    logo.forEach((line,index) => {
+      const lineDiv = document.createElement("div");
+      lineDiv.textContent = line;
+      const lightness = 30 + (Math.sin((step + index) / 2) * 20 + 20);
+      lineDiv.style.color = `hsl(20, 100%, ${lightness}%)`;
+      terminal.appendChild(lineDiv);
+    });
+    step++;
+    if (step > maxSteps) {
+      clearInterval(interval);
+      printToTerminal("\n✅ Update Complete!", "command-success");
+      printToTerminal("jd CLI is now up-to-date 🎉", "command-success");
+      printToTerminal("Version: 1.0.1", "command-success");
+    }
+  }, 120);
+}
+
+// Focus on the input when clicking anywhere in the terminal
+document.getElementById("terminal-container").addEventListener("click", () => {
+  inputHidden.focus();
+});
+</script>
+
+</body>
+</html>
