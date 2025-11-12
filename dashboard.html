@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CLI Log Monitor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    :root {
+      --primary-color: #3498db;
+      --secondary-color: #2c3e50;
+      --success-color: #27ae60;
+      --warning-color: #f39c12;
+      --danger-color: #e74c3c;
+      --light-bg: #f8f9fa;
+      --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Light Theme */
+    [data-theme="light"] {
+      --bg-primary: #f7fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --text-primary: #2d3748;
+      --text-secondary: #4a5568;
+      --text-muted: #718096;
+      --border-color: #e2e8f0;
+      --table-header-bg: #2c3e50;
+      --table-header-color: #ffffff;
+      --table-stripe: rgba(248, 249, 250, 0.7);
+      --table-hover: rgba(52, 152, 219, 0.1);
+      --input-bg: #ffffff;
+      --input-border: #cbd5e0;
+      --input-color: #2d3748;
+    }
+    
+    /* Dark Theme (Hacker Style) */
+    [data-theme="dark"] {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #111111;
+      --bg-card: #1a1a1a;
+      --text-primary: #00ff00;
+      --text-secondary: #00cc00;
+      --text-muted: #008800;
+      --border-color: #003300;
+      --table-header-bg: #001100;
+      --table-header-color: #00ff00;
+      --table-stripe: rgba(0, 255, 0, 0.05);
+      --table-hover: rgba(0, 255, 0, 0.1);
+      --input-bg: #000000;
+      --input-border: #003300;
+      --input-color: #00ff00;
+      
+      background: linear-gradient(135deg, #0a0a0a 0%, #001100 100%);
+      font-family: 'Courier New', monospace;
+    }
+    
+    [data-theme="dark"] .matrix-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.1;
+      z-index: -1;
+    }
+    
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 20px;
+      font-family: 'Inter', system-ui, Arial, sans-serif;
+      min-height: 100vh;
+      transition: all 0.3s ease;
+    }
+    
+    [data-theme="dark"] body {
+      font-family: 'Courier New', monospace;
+    }
+    
+    .header-container {
+      background: var(--bg-card);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .agent-cell {
+      max-width: 300px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    pre.small {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 0;
+      font-family: inherit;
+    }
+    
+    .controls .form-control, .controls .form-select {
+      min-width: 150px;
+      border-radius: 6px;
+      border: 1px solid var(--input-border);
+      background-color: var(--input-bg);
+      color: var(--input-color);
+      transition: all 0.3s;
+    }
+    
+    .controls .form-control:focus, .controls .form-select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+      background-color: var(--input-bg);
+      color: var(--input-color);
+    }
+    
+    [data-theme="dark"] .controls .form-control:focus,
+    [data-theme="dark"] .controls .form-select:focus {
+      box-shadow: 0 0 0 0.2rem rgba(0, 255, 0, 0.25);
+    }
+    
+    .muted {
+      color: var(--text-muted);
+    }
+    
+    table th, table td {
+      vertical-align: middle;
+      padding: 12px 8px;
+      border-color: var(--border-color);
+    }
+    
+    .table th {
+      background-color: var(--table-header-bg);
+      color: var(--table-header-color);
+      font-weight: 600;
+      border: none;
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+      background-color: var(--table-stripe);
+    }
+    
+    .table-hover tbody tr:hover {
+      background-color: var(--table-hover);
+    }
+    
+    .card {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 20px;
+      background-color: var(--bg-card);
+    }
+    
+    .card-body {
+      padding: 20px;
+    }
+    
+    .btn {
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+    
+    .btn-primary:hover {
+      background-color: #2980b9;
+      border-color: #2980b9;
+      transform: translateY(-2px);
+    }
+    
+    [data-theme="dark"] .btn-primary {
+      background-color: #00aa00;
+      border-color: #00aa00;
+      color: #000000;
+    }
+    
+    [data-theme="dark"] .btn-primary:hover {
+      background-color: #00ff00;
+      border-color: #00ff00;
+      color: #000000;
+    }
+    
+    .btn-success {
+      background-color: var(--success-color);
+      border-color: var(--success-color);
+    }
+    
+    [data-theme="dark"] .btn-success {
+      background-color: #008800;
+      border-color: #008800;
+    }
+    
+    .btn-outline-secondary {
+      color: var(--secondary-color);
+      border-color: var(--secondary-color);
+    }
+    
+    .btn-outline-secondary:hover {
+      background-color: var(--secondary-color);
+      color: white;
+    }
+    
+    [data-theme="dark"] .btn-outline-secondary {
+      color: #00cc00;
+      border-color: #00cc00;
+    }
+    
+    [data-theme="dark"] .btn-outline-secondary:hover {
+      background-color: #00cc00;
+      color: #000000;
+    }
+    
+    .stats-container {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 12px 16px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid var(--border-color);
+    }
+    
+    .pagination .page-link {
+      color: var(--secondary-color);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+    }
+    
+    .pagination .page-item.active .page-link {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+    
+    [data-theme="dark"] .pagination .page-link {
+      color: #00cc00;
+      background-color: #000000;
+      border-color: #003300;
+    }
+    
+    [data-theme="dark"] .pagination .page-item.active .page-link {
+      background-color: #00ff00;
+      border-color: #00ff00;
+      color: #000000;
+    }
+    
+    .badge {
+      font-size: 0.75em;
+      padding: 4px 8px;
+    }
+    
+    .marked-row {
+      background-color: rgba(243, 156, 18, 0.1) !important;
+      border-left: 3px solid var(--warning-color);
+    }
+    
+    [data-theme="dark"] .marked-row {
+      background-color: rgba(0, 255, 0, 0.2) !important;
+      border-left: 3px solid #00ff00;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+    
+    .status-online {
+      background-color: var(--success-color);
+    }
+    
+    .status-offline {
+      background-color: var(--danger-color);
+    }
+    
+    .filter-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text-secondary);
+    }
+    
+    .command-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .command-PAGE_LOAD {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .command-CLICK {
+      background-color: #cce7ff;
+      color: #004085;
+    }
+    
+    .command-SUBMIT {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    
+    [data-theme="dark"] .command-PAGE_LOAD {
+      background-color: #003300;
+      color: #00ff00;
+      border: 1px solid #00ff00;
+    }
+    
+    [data-theme="dark"] .command-CLICK {
+      background-color: #001133;
+      color: #00ffff;
+      border: 1px solid #00ffff;
+    }
+    
+    [data-theme="dark"] .command-SUBMIT {
+      background-color: #332200;
+      color: #ffff00;
+      border: 1px solid #ffff00;
+    }
+    
+    .note-box {
+      background-color: var(--table-stripe);
+      border-left: 4px solid var(--primary-color);
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    
+    .theme-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 30px;
+    }
+    
+    .theme-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: #00ff00;
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(30px);
+      background-color: #000000;
+    }
+    
+    .slider:after {
+      content: "☀️";
+      position: absolute;
+      left: 8px;
+      top: 3px;
+      font-size: 14px;
+    }
+    
+    input:checked + .slider:after {
+      content: "💻";
+      left: 35px;
+    }
+    
+    .glow-text {
+      text-shadow: 0 0 10px currentColor;
+    }
+    
+    [data-theme="dark"] .glow-text {
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes glow {
+      from {
+        text-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00, 0 0 15px #00ff00;
+      }
+      to {
+        text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00;
+      }
+    }
+    
+    @media (max-width: 1200px) {
+      .table-responsive {
+        font-size: 0.85rem;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .controls .col-auto {
+        margin-bottom: 10px;
+      }
+      
+      .table-responsive {
+        font-size: 0.8rem;
+      }
+      
+      .btn-text {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Matrix background for hacker theme -->
+  <canvas class="matrix-bg" id="matrixBg"></canvas>
+  
+  <div class="container">
+    <div class="header-container">
+      <div class="d-flex flex-column flex-md-row align-items-md-center mb-3">
+        <div class="d-flex align-items-center mb-2 mb-md-0">
+          <i class="bi bi-terminal-fill me-2" style="font-size: 1.5rem; color: var(--primary-color);"></i>
+          <h3 class="me-auto mb-0 glow-text">CLI Log Monitor</h3>
+        </div>
+        <div class="d-flex align-items-center ms-md-auto">
+          <span class="me-3">
+            <span class="status-indicator status-online"></span>
+            <small class="text-success fw-bold">API Connected</small>
+          </span>
+          <label class="theme-switch me-3">
+            <input type="checkbox" id="themeToggle">
+            <span class="slider"></span>
+          </label>
+          <small class="muted">Source: <code>https://love-link-mtyd.onrender.com/api/button/cli-log/</code></small>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title mb-3">Filters & Controls</h5>
+        <div class="row g-3 controls">
+          <div class="col-md-3">
+            <div class="filter-label">Quick Search</div>
+            <input id="q" class="form-control" placeholder="IP, agent, command, input..." />
+          </div>
+          <div class="col-md-2">
+            <div class="filter-label">IP Address</div>
+            <input id="ip" class="form-control" placeholder="IP contains" />
+          </div>
+          <div class="col-md-2">
+            <div class="filter-label">User Agent</div>
+            <input id="agent" class="form-control" placeholder="User-Agent contains" />
+          </div>
+          <div class="col-md-2">
+            <div class="filter-label">Command</div>
+            <select id="command" class="form-select">
+              <option value="">-- All Commands --</option>
+              <option>PAGE_LOAD</option>
+              <option>CLICK</option>
+              <option>SUBMIT</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <div class="filter-label">Platform</div>
+            <input id="platform" class="form-control" placeholder="Platform contains" />
+          </div>
+          <div class="col-md-2">
+            <div class="filter-label">Language</div>
+            <input id="lang" class="form-control" placeholder="Language (eg en-US)" />
+          </div>
+          <div class="col-md-2">
+            <div class="filter-label">From Date</div>
+            <input id="from" type="date" class="form-control" />
+          </div>
+          <div class="col-md-2">
+            <div class="filter-label">To Date</div>
+            <input id="to" type="date" class="form-control" />
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <button id="apply" class="btn btn-primary me-2">
+              <i class="bi bi-funnel"></i> <span class="btn-text">Apply Filters</span>
+            </button>
+            <button id="reset" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-clockwise"></i> <span class="btn-text">Reset</span>
+            </button>
+          </div>
+          <div class="col-md-4 d-flex align-items-end justify-content-md-end">
+            <button id="refresh" class="btn btn-outline-success me-2">
+              <i class="bi bi-arrow-repeat"></i> <span class="btn-text">Refresh</span>
+            </button>
+            <button id="export" class="btn btn-outline-secondary">
+              <i class="bi bi-download"></i> <span class="btn-text">Export CSV</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-container">
+      <div>
+        <span id="stats" class="fw-bold"></span>
+        <small id="last-fetched" class="muted ms-2"></small>
+      </div>
+      <div>
+        <button id="toggle-marked" class="btn btn-sm btn-warning me-2">
+          <i class="bi bi-star"></i> <span class="btn-text">Toggle Marked</span>
+        </button>
+        <span class="badge bg-primary" id="marked-count">0 marked</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table id="tbl" class="table table-sm table-striped table-bordered table-hover">
+        <thead class="table-light">
+          <tr>
+            <th>Time</th>
+            <th>IP</th>
+            <th>Command</th>
+            <th>Agent</th>
+            <th>Input</th>
+            <th>Screen</th>
+            <th>Platform</th>
+            <th>Language</th>
+            <th>Referrer</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <nav aria-label="pagination">
+      <ul class="pagination justify-content-center" id="pagination"></ul>
+    </nav>
+
+    <div class="note-box mt-4">
+      <i class="bi bi-info-circle me-2"></i>
+      <strong>Note:</strong> This dashboard pulls data directly from the provided API. Marked entries are stored in your browser's local storage.
+    </div>
+  </div>
+
+<script>
+const API = 'https://love-link-mtyd.onrender.com/api/button/cli-log/';
+const MARK_API = '/cli-log/mark/'; // Adjust this path as needed
+let rawData = [];
+let page = 1; 
+const PAGE_SIZE = 25;
+let showMarkedOnly = false;
+
+// Theme management
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('themeToggle').checked = savedTheme === 'dark';
+  if (savedTheme === 'dark') {
+    startMatrixAnimation();
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  
+  if (newTheme === 'dark') {
+    startMatrixAnimation();
+  } else {
+    stopMatrixAnimation();
+  }
+}
+
+// Matrix background animation for hacker theme
+let matrixAnimation;
+function startMatrixAnimation() {
+  const canvas = document.getElementById('matrixBg');
+  const ctx = canvas.getContext('2d');
+  
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  
+  const chars = "01";
+  const charArray = chars.split("");
+  const fontSize = 14;
+  const columns = canvas.width / fontSize;
+  const drops = [];
+  
+  for(let x = 0; x < columns; x++) {
+    drops[x] = 1;
+  }
+  
+  function draw() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = "#00FF00";
+    ctx.font = fontSize + "px monospace";
+    
+    for(let i = 0; i < drops.length; i++) {
+      const text = charArray[Math.floor(Math.random() * charArray.length)];
+      ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+      
+      if(drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+        drops[i] = 0;
+      }
+      drops[i]++;
+    }
+  }
+  
+  matrixAnimation = setInterval(draw, 33);
+}
+
+function stopMatrixAnimation() {
+  if (matrixAnimation) {
+    clearInterval(matrixAnimation);
+    const canvas = document.getElementById('matrixBg');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+// Get marked entries from localStorage
+function getMarkedEntries() {
+  try {
+    return JSON.parse(localStorage.getItem('markedLogEntries') || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+// Save marked entries to localStorage
+function saveMarkedEntries(markedEntries) {
+  localStorage.setItem('markedLogEntries', JSON.stringify(markedEntries));
+}
+
+// Mark an entry
+async function markLogEntry(id) {
+  try {
+    // Update UI immediately for better UX
+    const markedEntries = getMarkedEntries();
+    if (markedEntries.includes(id)) {
+      // Already marked, so unmark
+      const index = markedEntries.indexOf(id);
+      if (index > -1) {
+        markedEntries.splice(index, 1);
+      }
+    } else {
+      // Not marked, so mark it
+      markedEntries.push(id);
+    }
+    saveMarkedEntries(markedEntries);
+    
+    // Call the API to mark the entry on the server
+    const response = await fetch(MARK_API + id, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Add any required body data if needed
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to mark entry on server');
+    }
+    
+    // Re-render to reflect the change
+    render();
+  } catch (error) {
+    console.error('Error marking entry:', error);
+  }
+}
+
+async function fetchData(){
+  try{
+    document.getElementById('last-fetched').textContent = 'Fetching...';
+    const res = await fetch(API, { method: 'GET' });
+    if(!res.ok) throw new Error(res.status + ' ' + res.statusText);
+    const data = await res.json();
+    // if API returns an object with items array, adjust accordingly
+    rawData = Array.isArray(data) ? data : (data.items || data.data || []);
+    document.getElementById('last-fetched').textContent = 'Last fetched: ' + new Date().toLocaleString();
+    render();
+  }catch(e){
+    document.getElementById('last-fetched').textContent = 'Fetch failed: ' + e.message;
+    console.error(e);
+  }
+}
+
+function parseDate(ts){
+  try{ return new Date(ts); }catch(e){ return new Date(ts); }
+}
+
+function matchesFilters(item){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const ip = document.getElementById('ip').value.trim().toLowerCase();
+  const agent = document.getElementById('agent').value.trim().toLowerCase();
+  const cmd = document.getElementById('command').value;
+  const platform = document.getElementById('platform').value.trim().toLowerCase();
+  const lang = document.getElementById('lang').value.trim().toLowerCase();
+  const from = document.getElementById('from').value;
+  const to = document.getElementById('to').value;
+  
+  // Check if we're filtering for marked entries only
+  if (showMarkedOnly) {
+    const markedEntries = getMarkedEntries();
+    if (!markedEntries.includes(item._id)) {
+      return false;
+    }
+  }
+
+  if(cmd && String(item.command || '').toUpperCase() !== String(cmd).toUpperCase()) return false;
+  if(ip && !(String(item.IP || item.ip || '').toLowerCase().includes(ip))) return false;
+  if(agent && !(String(item.agent || '').toLowerCase().includes(agent))) return false;
+  if(platform && !(String(item.otherData?.platform || item.platform || '').toLowerCase().includes(platform))) return false;
+  if(lang && !(String(item.otherData?.language || item.language || '').toLowerCase().includes(lang))) return false;
+  if(q){
+    const hay = [item.IP, item.agent, item.command, item.input, item.otherData?.referrer, item._id].filter(Boolean).join(' ').toLowerCase();
+    if(!hay.includes(q)) return false;
+  }
+  if(from || to){
+    const d = parseDate(item.timestamp || item.time || item.otherData?.timestamp || '');
+    if(from){ const f = new Date(from + 'T00:00:00'); if(d < f) return false; }
+    if(to){ const t = new Date(to + 'T23:59:59'); if(d > t) return false; }
+  }
+  return true;
+}
+
+function render(){
+  const tbody = document.querySelector('#tbl tbody'); 
+  tbody.innerHTML = '';
+  const filtered = rawData.filter(matchesFilters);
+  document.getElementById('stats').textContent = `Showing ${filtered.length} / ${rawData.length} entries`;
+  
+  const markedEntries = getMarkedEntries();
+  document.getElementById('marked-count').textContent = `${markedEntries.length} marked`;
+  
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  page = Math.min(page, totalPages);
+  const start = (page-1)*PAGE_SIZE; 
+  const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+  for(const it of pageItems){
+    const tr = document.createElement('tr');
+    const time = parseDate(it.timestamp || it.otherData?.timestamp || '');
+    const isMarked = markedEntries.includes(it._id);
+    
+    if (isMarked) {
+      tr.classList.add('marked-row');
+    }
+    
+    // Create command badge
+    const commandClass = `command-${it.command || ''}`;
+    const commandBadge = it.command ? 
+      `<span class="command-badge ${commandClass}">${escapeHTML(it.command)}</span>` : '';
+    
+    tr.innerHTML = `
+      <td title="${time}">${time instanceof Date && !isNaN(time) ? time.toLocaleString() : ''}</td>
+      <td><code>${escapeHTML(it.IP || it.ip || '')}</code></td>
+      <td>${commandBadge}</td>
+      <td class="agent-cell" title="${escapeHTML(it.agent || '')}"><pre class="small">${escapeHTML(it.agent || '')}</pre></td>
+      <td>${escapeHTML(it.input || '')}</td>
+      <td>${escapeHTML(it.otherData?.screenResolution || it.screenResolution || '')}</td>
+      <td>${escapeHTML(it.otherData?.platform || it.platform || '')}</td>
+      <td>${escapeHTML(it.otherData?.language || it.language || '')}</td>
+      <td>${escapeHTML(it.otherData?.referrer || '')}</td>
+      <td>
+        <button class="btn btn-sm ${isMarked ? 'btn-warning' : 'btn-outline-warning'}" data-id="${it._id}">
+          <i class="bi ${isMarked ? 'bi-star-fill' : 'bi-star'}"></i>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+  
+  // Add event listeners to mark buttons
+  document.querySelectorAll('button[data-id]').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const id = e.currentTarget.getAttribute('data-id');
+      markLogEntry(id);
+    });
+  });
+  
+  renderPagination(totalPages);
+}
+
+function renderPagination(totalPages){
+  const ul = document.getElementById('pagination'); 
+  ul.innerHTML = '';
+  
+  // Previous button
+  if (page > 1) {
+    const prevLi = document.createElement('li'); 
+    prevLi.className = 'page-item';
+    prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a>`;
+    prevLi.addEventListener('click', (e)=>{ e.preventDefault(); page = page - 1; render(); });
+    ul.appendChild(prevLi);
+  }
+  
+  // Page numbers
+  for(let i=1;i<=totalPages;i++){
+    // Show only nearby pages for better UX with many pages
+    if (i === 1 || i === totalPages || (i >= page-2 && i <= page+2)) {
+      const li = document.createElement('li'); 
+      li.className = 'page-item' + (i===page ? ' active':'' );
+      li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+      li.addEventListener('click', (e)=>{ e.preventDefault(); page = i; render(); });
+      ul.appendChild(li);
+    } else if (i === page-3 || i === page+3) {
+      // Add ellipsis for skipped pages
+      const li = document.createElement('li'); 
+      li.className = 'page-item disabled';
+      li.innerHTML = `<a class="page-link" href="#">...</a>`;
+      ul.appendChild(li);
+    }
+  }
+  
+  // Next button
+  if (page < totalPages) {
+    const nextLi = document.createElement('li'); 
+    nextLi.className = 'page-item';
+    nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a>`;
+    nextLi.addEventListener('click', (e)=>{ e.preventDefault(); page = page + 1; render(); });
+    ul.appendChild(nextLi);
+  }
+}
+
+function escapeHTML(s){ 
+  if(!s && s!==0) return ''; 
+  return String(s).replace(/[&<>"']/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); 
+}
+
+function exportCSV(){
+  const filtered = rawData.filter(matchesFilters);
+  const headers = ['timestamp','IP','command','agent','input','screenResolution','platform','language','referrer','_id'];
+  const rows = filtered.map(it => headers.map(h => {
+    if(h==='screenResolution') return safe(it.otherData?.screenResolution || it.screenResolution || '');
+    if(h==='platform') return safe(it.otherData?.platform || it.platform || '');
+    if(h==='language') return safe(it.otherData?.language || it.language || '');
+    if(h==='referrer') return safe(it.otherData?.referrer || '');
+    return safe(it[h] || '');
+  }));
+  const csv = [headers.join(','), ...rows.map(r=>r.map(quote).join(','))].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); 
+  a.href = url; 
+  a.download = 'cli-log-export.csv'; 
+  document.body.appendChild(a); 
+  a.click(); 
+  a.remove(); 
+  URL.revokeObjectURL(url);
+}
+
+function safe(x){ return String(x).replace(/\n/g,' ').replace(/\r/g,' ').trim(); }
+function quote(s){ return '"' + String(s).replace(/"/g,'""') + '"'; }
+
+// small debounce for search
+let debounceTimer;
+['q','ip','agent','command','platform','lang','from','to'].forEach(id => {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener('input', ()=>{ 
+    clearTimeout(debounceTimer); 
+    debounceTimer = setTimeout(()=>{ page=1; render(); }, 250); 
+  });
+});
+
+// Event listeners
+document.getElementById('apply').addEventListener('click', ()=>{ page=1; render(); });
+document.getElementById('reset').addEventListener('click', ()=>{
+  ['q','ip','agent','command','platform','lang','from','to'].forEach(id=>{ 
+    const el=document.getElementById(id); 
+    if(el) el.value=''; 
+  }); 
+  page=1; 
+  render();
+});
+document.getElementById('refresh').addEventListener('click', ()=> fetchData());
+document.getElementById('export').addEventListener('click', exportCSV);
+document.getElementById('themeToggle').addEventListener('change', toggleTheme);
+
+// Toggle marked entries view
+document.getElementById('toggle-marked').addEventListener('click', () => {
+  showMarkedOnly = !showMarkedOnly;
+  document.getElementById('toggle-marked').classList.toggle('btn-warning', showMarkedOnly);
+  document.getElementById('toggle-marked').classList.toggle('btn-outline-warning', !showMarkedOnly);
+  page = 1;
+  render();
+});
+
+// Handle window resize for matrix animation
+window.addEventListener('resize', () => {
+  if (document.documentElement.getAttribute('data-theme') === 'dark') {
+    stopMatrixAnimation();
+    startMatrixAnimation();
+  }
+});
+
+// initial load
+initTheme();
+fetchData();
+</script>
+</body>
+</html>
